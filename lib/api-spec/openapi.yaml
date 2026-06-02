@@ -1,0 +1,300 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: XXE Injection Lab API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: session
+    description: Session management
+  - name: xml
+    description: XML parsing challenges
+  - name: flags
+    description: Flag management
+  - name: admin
+    description: Admin panel
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /session:
+    post:
+      operationId: createSession
+      tags: [session]
+      summary: Create a new session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SessionInput"
+      responses:
+        "201":
+          description: Session created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+        "400":
+          description: Bad request
+
+  /session/{id}:
+    get:
+      operationId: getSession
+      tags: [session]
+      summary: Get session by ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Session found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+        "404":
+          description: Not found
+
+  /xml/parse:
+    post:
+      operationId: parseXml
+      tags: [xml]
+      summary: Parse XML input for XXE challenge
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/XmlParseInput"
+      responses:
+        "200":
+          description: Parse result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/XmlParseResult"
+        "400":
+          description: Bad request
+
+  /flags/status/{sessionId}:
+    get:
+      operationId: getFlagStatus
+      tags: [flags]
+      summary: Get flag completion status for a session
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Flag statuses
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FlagStatusList"
+        "404":
+          description: Not found
+
+  /flags/submit:
+    post:
+      operationId: submitFlag
+      tags: [flags]
+      summary: Submit a flag answer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FlagSubmitInput"
+      responses:
+        "200":
+          description: Submission result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FlagSubmitResult"
+        "400":
+          description: Bad request
+
+  /user:
+    get:
+      operationId: getHiddenUser
+      tags: [session]
+      summary: Hidden route for flag 6 discovery
+      responses:
+        "200":
+          description: Hidden route found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HiddenUserResult"
+
+  /admin/users:
+    get:
+      operationId: getAdminUsers
+      tags: [admin]
+      summary: Admin panel - list all sessions with progress
+      responses:
+        "200":
+          description: All sessions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminUser"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+
+    SessionInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+
+    Session:
+      type: object
+      required: [id, name, startedAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        startedAt:
+          type: string
+        completedAt:
+          type: ["string", "null"]
+        flagCount:
+          type: integer
+
+    XmlParseInput:
+      type: object
+      required: [xml, sessionId, flagNumber]
+      properties:
+        xml:
+          type: string
+        sessionId:
+          type: integer
+        flagNumber:
+          type: integer
+
+    XmlParseResult:
+      type: object
+      required: [output, success]
+      properties:
+        output:
+          type: string
+        success:
+          type: boolean
+        flagFound:
+          type: boolean
+        flag:
+          type: ["string", "null"]
+        error:
+          type: ["string", "null"]
+
+    FlagStatusList:
+      type: object
+      required: [flags, total, completed]
+      properties:
+        flags:
+          type: array
+          items:
+            $ref: "#/components/schemas/FlagStatus"
+        total:
+          type: integer
+        completed:
+          type: integer
+
+    FlagStatus:
+      type: object
+      required: [flagNumber, completed]
+      properties:
+        flagNumber:
+          type: integer
+        completed:
+          type: boolean
+        capturedAt:
+          type: ["string", "null"]
+
+    FlagSubmitInput:
+      type: object
+      required: [sessionId, flagNumber, answer]
+      properties:
+        sessionId:
+          type: integer
+        flagNumber:
+          type: integer
+        answer:
+          type: string
+
+    FlagSubmitResult:
+      type: object
+      required: [correct]
+      properties:
+        correct:
+          type: boolean
+        flag:
+          type: ["string", "null"]
+        message:
+          type: string
+
+    HiddenUserResult:
+      type: object
+      required: [flag, message]
+      properties:
+        flag:
+          type: string
+        message:
+          type: string
+
+    AdminUser:
+      type: object
+      required: [id, name, startedAt, flagCount, completed]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        startedAt:
+          type: string
+        completedAt:
+          type: ["string", "null"]
+        flagCount:
+          type: integer
+        completed:
+          type: boolean
+        score:
+          type: integer
+        elapsedSeconds:
+          type: ["integer", "null"]
